@@ -9,9 +9,10 @@ https://docs.djangoproject.com/en/4.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
-
+from email.policy import default
 from pathlib import Path
 
+from django.conf import settings
 from django.conf.global_settings import AUTH_USER_MODEL
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -39,6 +40,12 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'rest_framework',
+    'drf_yasg',
+    'rest_framework_simplejwt',
+    "corsheaders",
+    
+
     #apps creadas
     'Seguridad.Usuario',
     'AppsFincaBarillas.Catalogos.TipoProducto',
@@ -59,7 +66,11 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    "corsheaders.middleware.CorsMiddleware",
+    "django.middleware.common.CommonMiddleware",
 ]
+
+CORS_ALLOW_ALL_ORIGINS = True  # Aceptar solicitudes desde cualquier dominio
 
 ROOT_URLCONF = 'Config.urls'
 
@@ -84,13 +95,33 @@ WSGI_APPLICATION = 'Config.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
-
+# Database
+# https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'mssql',
+        'NAME': 'SystemWeb_FincaBarillas',
+        'USER': 'Hanier',
+        'PASSWORD': 'CzMa7p*0HELD',
+        'HOST': '172.191.122.199',  # O '172.191.122.199\\TeacherES2MServer' si es instancia nombrada
+        'PORT': '1433',
+        'OPTIONS': {
+            'driver': 'ODBC Driver 17 for SQL Server',
+        },
     }
 }
+
+MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    'django.middleware.security.SecurityMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.contrib.messages.middleware.MessageMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+
+]
 
 
 # Password validation
@@ -110,6 +141,69 @@ AUTH_PASSWORD_VALIDATORS = [
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
 ]
+
+
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = True
+
+ALLOWED_HOSTS = ['*']
+
+REST_FRAMEWORK = {
+
+    # 'DEFAULT_AUTHENTICATION_CLASSES': (
+
+    #     'rest_framework_simplejwt.authentication.JWTAuthentication',
+    # )
+    'DEFAULT_RENDERER_CLASSES': [
+        'rest_framework.renderers.JSONRenderer',
+    ],
+
+}
+
+# Django project settings.py
+
+from datetime import timedelta
+
+
+# SIMPLE_JWT = {
+#     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=5),
+#     "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
+#     "ROTATE_REFRESH_TOKENS": False,
+#     "BLACKLIST_AFTER_ROTATION": False,
+#     "UPDATE_LAST_LOGIN": False,
+
+#     "ALGORITHM": "HS256",
+#     "SIGNING_KEY": settings.SECRET_KEY,
+#     "VERIFYING_KEY": "",
+#     "AUDIENCE": None,
+#     "ISSUER": None,
+#     "JSON_ENCODER": None,
+#     "JWK_URL": None,
+#     "LEEWAY": 0,
+
+#     "AUTH_HEADER_TYPES": ("Bearer",),
+#     "AUTH_HEADER_NAME": "HTTP_AUTHORIZATION",
+#     "USER_ID_FIELD": "id",
+#     "USER_ID_CLAIM": "user_id",
+#     "USER_AUTHENTICATION_RULE": "rest_framework_simplejwt.authentication.default_user_authentication_rule",
+
+#     "AUTH_TOKEN_CLASSES": ("rest_framework_simplejwt.tokens.AccessToken",),
+#     "TOKEN_TYPE_CLAIM": "token_type",
+#     "TOKEN_USER_CLASS": "rest_framework_simplejwt.models.TokenUser",
+
+#     "JTI_CLAIM": "jti",
+
+#     "SLIDING_TOKEN_REFRESH_EXP_CLAIM": "refresh_exp",
+#     "SLIDING_TOKEN_LIFETIME": timedelta(minutes=5),
+#     "SLIDING_TOKEN_REFRESH_LIFETIME": timedelta(days=1),
+
+#     "TOKEN_OBTAIN_SERIALIZER": "rest_framework_simplejwt.serializers.TokenObtainPairSerializer",
+#     "TOKEN_REFRESH_SERIALIZER": "rest_framework_simplejwt.serializers.TokenRefreshSerializer",
+#     "TOKEN_VERIFY_SERIALIZER": "rest_framework_simplejwt.serializers.TokenVerifySerializer",
+#     "TOKEN_BLACKLIST_SERIALIZER": "rest_framework_simplejwt.serializers.TokenBlacklistSerializer",
+#     "SLIDING_TOKEN_OBTAIN_SERIALIZER": "rest_framework_simplejwt.serializers.TokenObtainSlidingSerializer",
+#     "SLIDING_TOKEN_REFRESH_SERIALIZER": "rest_framework_simplejwt.serializers.TokenRefreshSlidingSerializer",
+# }
 
 
 # Internationalization
