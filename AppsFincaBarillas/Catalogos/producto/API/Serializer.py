@@ -17,5 +17,6 @@ class ProductoSerializer(serializers.ModelSerializer):
             'FechaSiembra',
             'CantidadDisponible',
             'CantidadMinima',
+            'precioVenta',
             'estado'
         ]

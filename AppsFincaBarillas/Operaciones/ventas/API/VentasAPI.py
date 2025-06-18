@@ -13,6 +13,8 @@ from AppsFincaBarillas.Operaciones.ventas.API.Serializer import VentaSerializer
 from AppsFincaBarillas.Operaciones.ventas.models import Venta
 from django.db.models import Count, Value
 from django.db.models.functions import Concat
+from django.db.models import Q
+from rest_framework.generics import get_object_or_404
 
 
 class VentaViewSet(ViewSet):
@@ -20,13 +22,20 @@ class VentaViewSet(ViewSet):
     queryset = Venta.objects.all()
     serializer = VentaSerializer
 
+    # Método para obtener el queryset de ventas activas
+    # Este método se utiliza para filtrar las ventas que están activas (estado=True)
+    def get_queryset(self):
+        return Venta.objects.filter(estado=True)
+
+
+
     def list(self, request):
-        ventas = Venta.objects.all()
+        ventas = self.get_queryset()
         serializer = VentaSerializer(ventas, many=True)
         return Response(status=status.HTTP_200_OK, data=serializer.data)
 
     def retrieve(self, request, pk: int):
-        venta = Venta.objects.get(pk=pk)
+        venta = self.get_queryset() .get(pk=pk)
         serializer = VentaSerializer(venta)
         return Response(status=status.HTTP_200_OK, data=serializer.data)
 
@@ -137,4 +146,22 @@ class VentaViewSet(ViewSet):
                 'reporte': list(top_clientes),
                 'mensaje': 'Top 10 clientes con mayor cantidad de ventas'
             }
+        )
+    # Dentro de tu ViewSet...
+    @action(methods=['delete'], detail=True, url_path='anular', url_name='anular_venta')
+    def anular_venta(self, request, pk=None):
+        venta = get_object_or_404(Venta, pk=pk)
+
+        if not venta.estado:
+            return Response(
+                {"detalle": "La venta ya fue anulada anteriormente."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        venta.estado = False
+        venta.save()
+
+        return Response(
+            {"detalle": "Venta anulada correctamente."},
+            status=status.HTTP_204_NO_CONTENT
         )

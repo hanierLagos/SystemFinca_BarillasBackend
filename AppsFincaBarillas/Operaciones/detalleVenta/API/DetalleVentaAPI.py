@@ -10,15 +10,17 @@ from AppsFincaBarillas.Operaciones.detalleVenta.API.Permission import IsAdminOrR
 #IsAuthenticatedOrReadOnly: solo los usuarios autenticado podran hacer CDU el resto solo lectura
 #Existen otros y crear nuestros propios permisos
 #AllowAny: para indicar que es un endpoit libre sin aunteticacion
+from django.db.models import Sum
+from rest_framework.exceptions import ValidationError
 
 from AppsFincaBarillas.Operaciones.detalleVenta.API.Serializer import DetalleVentaSerializer
 from AppsFincaBarillas.Operaciones.detalleVenta.models import DetalleVenta
 from AppsFincaBarillas.Operaciones.detalleVenta.API.Permission import IsAdminOrReadOnly
 
 class DetalleVentaViewSet(ViewSet):
-    permission_classes = [IsAuthenticated] #[IsAdminOrReadOnly]
+    # permission_classes = [IsAuthenticated] #[IsAdminOrReadOnly]
     queryset = DetalleVenta.objects.all()
-    serializer = DetalleVentaSerializer
+    serializer_class = DetalleVentaSerializer
 
     def list(self, request):
         data = request
@@ -30,65 +32,94 @@ class DetalleVentaViewSet(ViewSet):
         return Response(status=status.HTTP_200_OK, data=serializer.data)
 
     def create(self, request):
-        # Categoria.objects.create(Codigo=request.Post['Codigo'],Nombre=request.Post['Nombre'])
-        serializer = DetalleVentaSerializer(data=request.Post)
+        data = request.data
+        if isinstance(data, list):
+            detalles_creados = []
+            errores = []
+
+            for item in data:
+                serializer = DetalleVentaSerializer(data=item)
+                if serializer.is_valid():
+                    producto = serializer.validated_data['producto']
+                    cantidad = serializer.validated_data['cantidad_producto']
+                    precio = serializer.validated_data['precio_producto']
+
+                    # Validar stock
+                    if producto.CantidadDisponible < cantidad:
+                        errores.append({
+                            'producto': str(producto),
+                            'error': f'Sin stock suficiente. Disponible: {producto.CantidadDisponible}'
+                        })
+                        continue
+
+                    # Calcular sub_total
+                    sub_total = float(precio) * cantidad
+
+                    # Restar cantidad al stock
+                    producto.CantidadDisponible -= cantidad
+                    producto.save()
+
+                    # Crear detalle
+                    detalle = DetalleVenta.objects.create(
+                        venta=serializer.validated_data['venta'],
+                        producto=producto,
+                        descripcion=serializer.validated_data['descripcion'],
+                        precio_producto=precio,
+                        cantidad_producto=cantidad,
+                        sub_total=sub_total
+                    )
+                    detalles_creados.append(DetalleVentaSerializer(detalle).data)
+                else:
+                    errores.append(serializer.errors)
+
+            if errores:
+                return Response({'errores': errores, 'detalles_creados': detalles_creados}, status=status.HTTP_207_MULTI_STATUS)
+
+            return Response(detalles_creados, status=status.HTTP_201_CREATED)
+
+        # Si no es una lista (solo un detalle), tratamos como individual
+        serializer = DetalleVentaSerializer(data=data)
         serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(status=status.HTTP_200_OK, data=serializer.data)
 
-    def update(self, request, pk: int):
-        detalleVenta = DetalleVenta.objects.get(pk=pk)
-        serializer = DetalleVentaSerializer(instance=detalleVenta, data=request.data)
-        serializer.is_valid(raise_exception= True)
-        serializer.save()
-        return Response(status=status.HTTP_200_OK, data= serializer.data)
+        producto = serializer.validated_data['producto']
+        cantidad = serializer.validated_data['cantidad_producto']
+        precio = serializer.validated_data['precio_producto']
 
+        if producto.CantidadDisponible < cantidad:
+            raise ValidationError(f'Sin stock suficiente. Disponible: {producto.CantidadDisponible}')
 
-    def delete(self, request, pk: int):
-        detalleVenta = DetalleVenta.objects.get(pk=pk)
-        serializer = DetalleVentaSerializer(detalleVenta)
-        detalleVenta.delete()
-        return Response(status= status.HTTP_204_NO_CONTENT)
+        sub_total = float(precio) * cantidad
+        producto.CantidadDisponible -= cantidad
+        producto.save()
 
-    #Actualizar detalle venta
-    @action(methods=['put'], detail=False)
-    def ActualizarDetalleVenta(self, request):
-        detalle_id = request.data.get('DetalleId')
-        nueva_cantidad = request.data.get('Cantidad')
-        nuevo_precio = request.data.get('PrecioProducto')
+        detalle = DetalleVenta.objects.create(
+            venta=serializer.validated_data['venta'],
+            producto=producto,
+            descripcion=serializer.validated_data['descripcion'],
+            precio_producto=precio,
+            cantidad_producto=cantidad,
+            sub_total=sub_total
+        )
 
-        detalle_venta = DetalleVenta.objects.filter(id=detalle_id).first()
-        if detalle_venta:
-            if nueva_cantidad is not None:
-                detalle_venta.cantidadProducto = nueva_cantidad
-            if nuevo_precio is not None:
-                detalle_venta.PrecioProducto = nuevo_precio
-            detalle_venta.save()
-            return Response(status=status.HTTP_200_OK, data={'mensaje': 'Detalle de venta actualizado'})
-        return Response(status=status.HTTP_404_NOT_FOUND, data={'mensaje': 'Detalle de venta no encontrado'})
+        return Response(DetalleVentaSerializer(detalle).data, status=status.HTTP_201_CREATED)
 
-    #Reporte de productos más vendidos:
-    @action(methods=['get'], detail=False)
-    def ReporteProductosMasVendidos(self, request):
-        productos_mas_vendidos = DetalleVenta.objects.values('ProductoID').annotate(
-            total_vendido=sum('cantidadProducto')).order_by('-total_vendido')
-        return Response(status=status.HTTP_200_OK, data={'reporte': productos_mas_vendidos})
+    @action(detail=False, methods=['get'], url_path='top-productos', url_name='top_productos')
+    def top_productos_mas_vendidos(self, request):
+        top_productos = (
+            DetalleVenta.objects
+            .values('producto__nombre')
+            .annotate(cantidad_vendida=Sum('cantidad_producto'))
+            .order_by('-cantidad_vendida')[:10]
+        )
 
-    #Obtener total de productos vendidos en una venta específica:
+        return Response(
+            status=status.HTTP_200_OK,
+            data={
+                'reporte': list(top_productos),
+                'mensaje': 'Top 10 productos más vendidos'
+            }
+        )
 
-    @action(methods=['get'], detail=True)
-    def TotalProductosVendidos(self, request, pk=None):
-        detalles = DetalleVenta.objects.filter(VentaI=pk)
-        total = detalles.aggregate(sum('cantidadProducto'))['cantidadProducto__sum']
-        return Response(status=status.HTTP_200_OK, data={'total_productos': total})
-
-    #Filtrar detalles de venta por precio mínimo:
-    @action(methods=['get'], detail=False)
-    def FiltrarPorPrecioMinimo(self, request):
-        precio_min = request.query_params.get('precio_min', 0)
-        detalles = DetalleVenta.objects.filter(PrecioProducto__gte=precio_min)
-        serializer = DetalleVentaSerializer(detalles, many=True)
-        return Response(status=status.HTTP_200_OK, data={'resultado': serializer.data})
 
 
 

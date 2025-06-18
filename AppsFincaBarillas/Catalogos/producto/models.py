@@ -9,6 +9,7 @@ class producto(models.Model):
     FechaSiembra = models.DateTimeField(auto_now_add=True)
     CantidadDisponible = models.IntegerField()  # Cantidad disponible del producto
     CantidadMinima = models.IntegerField()  # Cantidad mínima del producto
+    precioVenta= models.DecimalField(max_digits=10, decimal_places=2, default=0.00)  # Precio de venta del producto
     estado = models.CharField(max_length=32)
 
     def __str__(self):

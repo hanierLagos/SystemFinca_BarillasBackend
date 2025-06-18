@@ -33,17 +33,13 @@ class ProductoViewSet(viewsets.ModelViewSet):
         except producto.DoesNotExist:
             return Response({"detail": "Producto no encontrado."}, status=status.HTTP_404_NOT_FOUND)
 
-    
+    @action(methods=['GET'], detail=False)
+    def obtener_productos_disponibles(self, request):
+        productos = producto.objects.all()
+        serializer = ProductoSerializer(productos, many=True)
+        return Response(serializer.data)
     # Rutas adicionales...
-    @action(methods=['post'], detail=False)
-    def CambiarEstadoProducto(self, request):
-        id_producto = request.data.get('IdProducto')
-        prod = producto.objects.filter(pk=id_producto).first()
-        if prod:
-            prod.estado = 'Descontinuado'
-            prod.save()
-            return Response({'mensaje': 'Producto descontinuado'}, status=status.HTTP_200_OK)
-        return Response({'mensaje': 'Producto no encontrado'}, status=status.HTTP_400_BAD_REQUEST)
+
 
     @action(methods=['post'], detail=False)
     def FiltrarNombreProducto(self, request):

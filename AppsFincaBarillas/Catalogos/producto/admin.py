@@ -11,7 +11,8 @@ class productoAdmin(admin.ModelAdmin):
         'tipoProductoId',
         'FechaSiembra',
         'CantidadDisponible',  
-        'CantidadMinima',      
+        'CantidadMinima',  
+        'precioVenta',    
         'estado'
     ]
     search_fields = ['codigoCultivo']
