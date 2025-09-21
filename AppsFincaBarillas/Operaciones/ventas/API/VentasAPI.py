@@ -4,7 +4,8 @@ from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.viewsets import ViewSet
-from rest_framework.permissions import AllowAny  
+from rest_framework.permissions import AllowAny
+from rest_framework.permissions import IsAuthenticated
 from django.db.models.functions import Concat, Coalesce
 from django.db.models.functions import ExtractYear, ExtractMonth
 from django.db.models import Sum, Value, CharField, Case, When
@@ -18,7 +19,7 @@ from rest_framework.generics import get_object_or_404
 
 
 class VentaViewSet(ViewSet):
-    permission_classes = [AllowAny]  # Endpoint libre, sin autenticación
+    permission_classes = [IsAuthenticated] #[IsAdminOrReadOnly]
     queryset = Venta.objects.all()
     serializer = VentaSerializer
 

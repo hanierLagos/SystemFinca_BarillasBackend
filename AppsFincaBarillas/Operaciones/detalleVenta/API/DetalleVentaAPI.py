@@ -18,7 +18,7 @@ from AppsFincaBarillas.Operaciones.detalleVenta.models import DetalleVenta
 from AppsFincaBarillas.Operaciones.detalleVenta.API.Permission import IsAdminOrReadOnly
 
 class DetalleVentaViewSet(ViewSet):
-    # permission_classes = [IsAuthenticated] #[IsAdminOrReadOnly]
+    permission_classes = [IsAuthenticated] #[IsAdminOrReadOnly]
     queryset = DetalleVenta.objects.all()
     serializer_class = DetalleVentaSerializer
 

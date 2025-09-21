@@ -17,7 +17,7 @@ from AppsFincaBarillas.Catalogos.TipoProducto.models import TipoProducto
 from AppsFincaBarillas.Catalogos.TipoProducto.API.Permission import IsAdminOrReadOnly
 
 class TipoProductoViewSet(ViewSet):
-    #permission_classes = [IsAuthenticated] #[IsAdminOrReadOnly]
+    permission_classes = [IsAuthenticated] #[IsAdminOrReadOnly]
     queryset = TipoProducto.objects.all()
     serializer = TipoProductoSerializer
 

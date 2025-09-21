@@ -1,46 +1,56 @@
-from argparse import Action
-from rest_framework import viewsets, status
-from rest_framework.response import Response
-from rest_framework.exceptions import ValidationError
+# Importaciones necesarias para el funcionamiento del ViewSet
+from rest_framework import viewsets, status  # Importa las clases base de ViewSet y códigos de estado HTTP
+from rest_framework.response import Response  # Permite devolver respuestas HTTP con datos
+from rest_framework.decorators import action  # Permite crear acciones personalizadas en los ViewSets
+from rest_framework.permissions import IsAuthenticated  # Permiso para restringir el acceso a usuarios autenticados
+
+# Importa los modelos y serializadores del proyecto
 from AppsFincaBarillas.Catalogos.producto.models import producto
 from AppsFincaBarillas.Catalogos.producto.API.Serializer import ProductoSerializer
-from AppsFincaBarillas.Catalogos.TipoProducto.models import TipoProducto
-from rest_framework.decorators import action
+from AppsFincaBarillas.Catalogos.producto.API.Permission import IsAdminOrReadOnly  # Permiso personalizado
 
+# Se define el ViewSet para la entidad "producto"
 class ProductoViewSet(viewsets.ModelViewSet):
+    # Se asigna que solo los usuarios autenticados pueden acceder a este ViewSet
+    permission_classes = [IsAuthenticated]  # #[IsAdminOrReadOnly] se puede habilitar según necesidad
+
+    # Define el queryset y el serializador que serán utilizados en las operaciones CRUD
     queryset = producto.objects.all()
     serializer_class = ProductoSerializer
 
+    # Sobrescribe el método create para mantener la lógica original
     def create(self, request, *args, **kwargs):
         return super().create(request, *args, **kwargs)
 
+    # Sobrescribe el método update para mantener la lógica original
     def update(self, request, *args, **kwargs):
         return super().update(request, *args, **kwargs)
 
+    # Sobrescribe el método destroy para marcar el producto como inactivo en lugar de eliminarlo
     def destroy(self, request, *args, **kwargs):
-        # Marca como inactivo en lugar de eliminar
         instance = self.get_object()
         instance.estado = 'Inactivo'
         instance.save()
         return Response({'message': 'Producto marcado como inactivo'}, status=status.HTTP_200_OK)
-     
+
+    # Método alternativo de "delete" usando pk, marca el producto como inactivo
     def delete(self, request, pk: int):
         try:
             prod = producto.objects.get(pk=pk)
-            prod.estado = "Inactivo"  # Cambia el estado a Inactivo
+            prod.estado = "Inactivo"
             prod.save()
             return Response({"detail": "Producto desactivado correctamente."}, status=status.HTTP_200_OK)
         except producto.DoesNotExist:
             return Response({"detail": "Producto no encontrado."}, status=status.HTTP_404_NOT_FOUND)
 
+    # Acción personalizada para obtener todos los productos disponibles
     @action(methods=['GET'], detail=False)
     def obtener_productos_disponibles(self, request):
         productos = producto.objects.all()
         serializer = ProductoSerializer(productos, many=True)
         return Response(serializer.data)
-    # Rutas adicionales...
 
-
+    # Acción personalizada para filtrar productos por letra inicial P o F
     @action(methods=['post'], detail=False)
     def FiltrarNombreProducto(self, request):
         letra = request.data.get('letra_inicial')
@@ -50,6 +60,7 @@ class ProductoViewSet(viewsets.ModelViewSet):
         serializer = ProductoSerializer(productos, many=True)
         return Response({'resultado': serializer.data}, status=status.HTTP_200_OK)
 
+    # Acción personalizada para generar un reporte con la cantidad de productos disponibles
     @action(methods=['get'], detail=False)
     def ReporteProductosDisponibles(self, request):
         total = producto.objects.filter(estado='DISPONIBLE').count()

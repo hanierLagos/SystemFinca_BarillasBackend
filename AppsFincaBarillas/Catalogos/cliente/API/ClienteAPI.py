@@ -21,8 +21,9 @@ from rest_framework.renderers import JSONRenderer
 
 
 
+
 class ClienteViewSet(ViewSet):
-    #permission_classes = [IsAuthenticated] #[IsAdminOrReadOnly]
+    permission_classes = [IsAuthenticated] #[IsAdminOrReadOnly]
     queryset = Cliente.objects.all()
     serializer = ClienteSerializer
 
